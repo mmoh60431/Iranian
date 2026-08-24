@@ -148,6 +148,7 @@ const htmlContent = `<!DOCTYPE html>
             const password = document.getElementById('password').value;
             const errDiv = document.getElementById('loginError');
             
+            // مخفی کردن خطای قبلی موقع تلاش جدید
             errDiv.classList.add('hidden');
 
             const res = await fetch('/api/login', {
@@ -156,12 +157,14 @@ const htmlContent = `<!DOCTYPE html>
                 body: JSON.stringify({ username, password })
             });
             const data = await res.json();
+            
             if (res.ok) {
                 currentUser = data.user;
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 initDashboard();
             } else {
+                // نمایش پیغام خطا و ماندن در صفحه ورود
                 errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
                 errDiv.classList.remove('hidden');
             }
@@ -194,7 +197,6 @@ const htmlContent = `<!DOCTYPE html>
             e.preventDefault();
             const token = localStorage.getItem('token');
             
-            // تبدیل تاریخ‌ها به شمسی قبل از ارسال به سرور
             const rawStart = document.getElementById('startDate').value;
             const rawEnd = document.getElementById('endDate').value;
 
