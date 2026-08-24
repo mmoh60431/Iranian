@@ -109,21 +109,29 @@ const htmlContent = `<!DOCTYPE html>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- بخش مدیریت پرسنل (افزودن، ویرایش رمز/نام کاربری، و حذف) -->
+                <!-- بخش مدیریت کاربران (افزودن با تعیین نقش، ویرایش و حذف) -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
-                    <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
+                    <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
                         <div>
                             <label class="block mb-1 text-xs font-medium">نام و نام خانوادگی</label>
                             <input type="text" id="newFullname" class="w-full p-2 border rounded-lg text-sm" placeholder="مثلا علی رضایی" required>
                         </div>
                         <div>
-                            <label class="block mb-1 text-xs font-medium">نام کاربری (برای ورود)</label>
-                            <input type="text" id="newUsername" class="w-full p-2 border rounded-lg text-sm" placeholder="مثلا ali" required>
+                            <label class="block mb-1 text-xs font-medium">نام کاربری</label>
+                            <input type="text" id="newUsername" class="w-full p-2 border rounded-lg text-sm" placeholder="نام کاربری" required>
                         </div>
                         <div>
                             <label class="block mb-1 text-xs font-medium">رمز عبور</label>
                             <input type="password" id="newPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="رمز عبور" required>
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-xs font-medium">نقش کاربر</label>
+                            <select id="newRole" class="w-full p-2 border rounded-lg text-sm bg-white">
+                                <option value="employee">پرسنل عادی</option>
+                                <option value="manager1">مدیر اول</option>
+                                <option value="manager2">مدیر دوم</option>
+                            </select>
                         </div>
                         <div class="flex items-end">
                             <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition text-sm">افزودن کاربر</button>
@@ -135,7 +143,7 @@ const htmlContent = `<!DOCTYPE html>
                                 <tr class="border-b bg-gray-50 text-sm">
                                     <th class="p-3">نام کامل</th>
                                     <th class="p-3">نام کاربری</th>
-                                    <th class="p-3">نقش</th>
+                                    <th class="p-3">نقش سیستم</th>
                                     <th class="p-3">عملیات (ویرایش / حذف)</th>
                                 </tr>
                             </thead>
@@ -164,7 +172,7 @@ const htmlContent = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- مدال ویرایش کاربر (تغییر نام کاربری یا رمز عبور فراموش شده) -->
+    <!-- مدال ویرایش کاربر -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-lg">
             <h3 class="text-lg font-bold mb-4 text-gray-700">ویرایش اطلاعات کاربر</h3>
@@ -179,8 +187,16 @@ const htmlContent = `<!DOCTYPE html>
                     <input type="text" id="editUsername" class="w-full p-2 border rounded-lg text-sm" required>
                 </div>
                 <div class="mb-4">
-                    <label class="block mb-1 text-sm font-medium">رمز عبور جدید (اختیاری - برای بازنشانی)</label>
-                    <input type="password" id="editPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="اگر نمی‌خواهید تغییر کند خالی بگذارید">
+                    <label class="block mb-1 text-sm font-medium">رمز عبور جدید (اختیاری - بازنشانی)</label>
+                    <input type="password" id="editPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="اگر تغییر نمی‌دهید خالی بگذارید">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-1 text-sm font-medium">نقش کاربر</label>
+                    <select id="editRole" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        <option value="employee">پرسنل عادی</option>
+                        <option value="manager1">مدیر اول</option>
+                        <option value="manager2">مدیر دوم</option>
+                    </select>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
                     <button type="button" onclick="closeEditModal()" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">انصراف</button>
@@ -391,28 +407,32 @@ const htmlContent = `<!DOCTYPE html>
             const tableBody = document.getElementById('usersTableBody');
             tableBody.innerHTML = '';
             users.forEach(u => {
-                let actionBtns = u.role === 'employee' ? 
-                    \`<div class="flex gap-2">
-                        <button onclick="openEditModal(\${u.id}, '\${u.fullname}', '\${u.username}')" class="bg-amber-50 text-amber-700 px-3 py-1 rounded text-xs hover:bg-amber-100">ویرایش / بازنشانی رمز</button>
-                        <button onclick="deleteUser(\${u.id})" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs hover:bg-red-100">حذف</button>
-                     </div>\` : 
-                    \`<span class="text-xs text-gray-400">مدیر سیستم</span>\`;
+                const roleLabels = { 'employee': 'پرسنل عادی', 'manager1': 'مدیر اول', 'manager2': 'مدیر دوم' };
+                let deleteBtn = u.id !== currentUser.id ? 
+                    \`<button onclick="deleteUser(\${u.id})" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs hover:bg-red-100">حذف</button>\` : 
+                    \`<span class="text-xs text-gray-400">حساب خودتان</span>\`;
 
                 tableBody.innerHTML += \`
                     <tr class="border-b text-sm">
                         <td class="p-3">\${u.fullname}</td>
                         <td class="p-3">\${u.username}</td>
-                        <td class="p-3">\${u.role === 'employee' ? 'پرسنل' : 'مدیر'}</td>
-                        <td class="p-3">\${actionBtns}</td>
+                        <td class="p-3"><span class="px-2 py-1 bg-gray-100 rounded text-xs font-semibold">\${roleLabels[u.role]}</span></td>
+                        <td class="p-3">
+                            <div class="flex gap-2">
+                                <button onclick="openEditModal(\${u.id}, '\${u.fullname}', '\${u.username}', '\${u.role}')" class="bg-amber-50 text-amber-700 px-3 py-1 rounded text-xs hover:bg-amber-100">ویرایش</button>
+                                \${deleteBtn}
+                            </div>
+                        </td>
                     </tr>\`;
             });
         }
 
-        function openEditModal(id, fullname, username) {
+        function openEditModal(id, fullname, username, role) {
             document.getElementById('editUserId').value = id;
             document.getElementById('editFullname').value = fullname;
             document.getElementById('editUsername').value = username;
             document.getElementById('editPassword').value = '';
+            document.getElementById('editRole').value = role;
             document.getElementById('editModal').classList.remove('hidden');
         }
 
@@ -427,11 +447,12 @@ const htmlContent = `<!DOCTYPE html>
             const fullname = document.getElementById('editFullname').value;
             const username = document.getElementById('editUsername').value;
             const password = document.getElementById('editPassword').value;
+            const role = document.getElementById('editRole').value;
 
             const res = await fetch(\`/api/users/\${id}\`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                body: JSON.stringify({ fullname, username, password })
+                body: JSON.stringify({ fullname, username, password, role })
             });
 
             if (res.ok) {
@@ -450,17 +471,19 @@ const htmlContent = `<!DOCTYPE html>
             const fullname = document.getElementById('newFullname').value;
             const username = document.getElementById('newUsername').value;
             const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
 
             const res = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                body: JSON.stringify({ fullname, username, password })
+                body: JSON.stringify({ fullname, username, password, role })
             });
 
             if (res.ok) {
                 document.getElementById('newFullname').value = '';
                 document.getElementById('newUsername').value = '';
                 document.getElementById('newPassword').value = '';
+                document.getElementById('newRole').value = 'employee';
                 loadManagerData();
                 alert('کاربر جدید با موفقیت اضافه شد.');
             } else {
@@ -574,7 +597,7 @@ const server = http.createServer((req, res) => {
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             try {
-                const { fullname, username, password } = JSON.parse(body);
+                const { fullname, username, password, role } = JSON.parse(body);
                 if (users.some(u => u.username === username)) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'این نام کاربری قبلاً ثبت شده است.' }));
@@ -584,7 +607,7 @@ const server = http.createServer((req, res) => {
                     id: nextUserId++,
                     username,
                     password: hashPassword(password),
-                    role: 'employee',
+                    role: role && ['employee', 'manager1', 'manager2'].includes(role) ? role : 'employee',
                     fullname
                 });
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -604,9 +627,9 @@ const server = http.createServer((req, res) => {
         const targetId = Number(req.url.split('/')[3]);
         const targetUser = users.find(u => u.id === targetId);
 
-        if (!targetUser || targetUser.role !== 'employee') {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'امکان ویرایش این کاربر وجود ندارد.' }));
+        if (!targetUser) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'کاربر یافت نشد.' }));
             return;
         }
 
@@ -614,8 +637,7 @@ const server = http.createServer((req, res) => {
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             try {
-                const { fullname, username, password } = JSON.parse(body);
-                // بررسی تکراری نبودن نام کاربری جدید
+                const { fullname, username, password, role } = JSON.parse(body);
                 if (users.some(u => u.username === username && u.id !== targetId)) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'این نام کاربری توسط شخص دیگری استفاده می‌شود.' }));
@@ -624,6 +646,9 @@ const server = http.createServer((req, res) => {
 
                 targetUser.fullname = fullname;
                 targetUser.username = username;
+                if (role && ['employee', 'manager1', 'manager2'].includes(role)) {
+                    targetUser.role = role;
+                }
                 if (password && password.trim() !== '') {
                     targetUser.password = hashPassword(password);
                 }
@@ -643,11 +668,10 @@ const server = http.createServer((req, res) => {
             return;
         }
         const targetId = Number(req.url.split('/')[3]);
-        const targetUser = users.find(u => u.id === targetId);
         
-        if (!targetUser || targetUser.role !== 'employee') {
+        if (targetId === user.id) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'امکان حذف مدیران وجود ندارد.' }));
+            res.end(JSON.stringify({ error: 'امکان حذف حساب کاربری خودتان وجود ندارد.' }));
             return;
         }
 
