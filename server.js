@@ -16,9 +16,6 @@ let nextLeaveId = 1;
 let nextUserId = 4;
 let activeSessions = {};
 
-// استفاده از لینک مستقیم و امن برای لوگو
-const logoUrl = "https://i.ibb.co/6R0n72g/images.jpg";
-
 const htmlContent = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -33,8 +30,8 @@ const htmlContent = `<!DOCTYPE html>
     <div id="app" class="container mx-auto p-4 max-w-4xl">
         <div id="loginSection" class="max-w-md mx-auto mt-12">
             <div class="text-center mb-6">
-                <div class="inline-block p-2 bg-white rounded-2xl shadow-md mb-3 border border-gray-100">
-                    <img src="${logoUrl}" alt="پوشاک ایرانیان" class="w-20 h-20 object-contain mx-auto rounded-xl">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-md mb-3 text-2xl font-black">
+                    پ
                 </div>
                 <h1 class="text-2xl font-black text-gray-800 tracking-wide">پوشاک ایرانیان</h1>
                 <span class="inline-block mt-1 text-xs px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full">شعبه سعدی</span>
@@ -61,7 +58,7 @@ const htmlContent = `<!DOCTYPE html>
         <div id="dashboardSection" class="hidden mt-6">
             <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div class="flex items-center gap-3">
-                    <img src="${logoUrl}" alt="لوگو" class="w-10 h-10 object-contain rounded-lg border">
+                    <div class="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-lg font-black text-lg">پ</div>
                     <div>
                         <h1 id="welcomeText" class="text-lg font-bold text-gray-700"></h1>
                         <span id="roleBadge" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full"></span>
@@ -107,7 +104,6 @@ const htmlContent = `<!DOCTYPE html>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- گزارش تفکیکی روزها و تعداد مرخصی پرسنل -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold text-gray-700">گزارش تفکیکی روزها و تعداد مرخصی پرسنل</h2>
