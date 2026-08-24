@@ -77,6 +77,7 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- نمای اختصاصی پرسنل (فقط ثبت مرخصی و تاریخچه خودش) -->
             <div id="employeeView" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">ثبت درخواست مرخصی جدید</h2>
@@ -102,6 +103,7 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- نمای اختصاصی مدیران (مدیریت درخواست‌ها، مدیریت کاربران، آمار) -->
             <div id="managerView" class="hidden space-y-6">
                 <!-- بخش مدیریت درخواست‌ها -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
@@ -109,7 +111,7 @@ const htmlContent = `<!DOCTYPE html>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- بخش مدیریت کاربران (افزودن با تعیین نقش، ویرایش و حذف) -->
+                <!-- بخش مدیریت کاربران (فقط برای مدیران) -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
                     <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
@@ -290,10 +292,13 @@ const htmlContent = `<!DOCTYPE html>
             
             startTimer();
 
+            // تفکیک کاملاً امن نمایش پنل بر اساس نقش کاربر
             if (currentUser.role === 'employee') {
+                document.getElementById('managerView').classList.add('hidden');
                 document.getElementById('employeeView').classList.remove('hidden');
                 loadLeaves();
             } else {
+                document.getElementById('employeeView').classList.add('hidden');
                 document.getElementById('managerView').classList.remove('hidden');
                 loadManagerData();
             }
@@ -403,6 +408,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function loadUsersList(token) {
             const res = await fetch('/api/users', { headers: { 'Authorization': token } });
+            if (!res.ok) return; // اگر پرسنل به شکل غیرمجاز درخواست داد رد شود
             const users = await res.json();
             const tableBody = document.getElementById('usersTableBody');
             tableBody.innerHTML = '';
