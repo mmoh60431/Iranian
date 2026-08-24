@@ -1,21 +1,65 @@
 const http = require('http');
 const crypto = require('crypto');
+const { Pool } = require('pg');
 
-// شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس
+// اتصال به دیتابیس ابری PostgreSQL در Railway
+const db = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
+
+// ایجاد جدول‌ها و کاربران پیش‌فرض
+async function initDatabase() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE,
+                password TEXT,
+                role TEXT,
+                fullname TEXT
+            )
+        `);
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS leaves (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                start_date TEXT,
+                end_date TEXT,
+                reason TEXT,
+                status1 TEXT,
+                status2 TEXT,
+                final_status TEXT
+            )
+        `);
+
+        // بررسی کاربران پیش‌فرض
+        const res = await db.query(`SELECT COUNT(*) as count FROM users`);
+        if (parseInt(res.rows[0].count) === 0) {
+            const defaultUsers = [
+                ['تست', hashPassword('1234'), 'employee', 'کاربر تست'],
+                ['میترا حاجیان نژاد', hashPassword('mitra1368'), 'manager1', 'میترا حاجیان‌نژاد'],
+                ['محمد معماری پناه', hashPassword('53038386'), 'manager2', 'محمد معماری پناه']
+            ];
+
+            for (let u of defaultUsers) {
+                await db.query(`INSERT INTO users (username, password, role, fullname) VALUES ($1, $2, $3, $4)`, u);
+            }
+            console.log('کاربران پیش‌فرض ایجاد شدند.');
+        }
+        console.log('متصل به دیتابیس ابری PostgreSQL.');
+    } catch (err) {
+        console.error('خطا در راه‌اندازی دیتابیس', err.message);
+    }
+}
+
+initDatabase();
+
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس کاربران
-let users = [
-    { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
-    { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'میترا حاجیان‌نژاد' },
-    { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'محمد معماری پناه' }
-];
-
-let leaves = [];
-let nextLeaveId = 4;
-let nextUserId = 4;
 let activeSessions = {};
 
 const htmlContent = `<!DOCTYPE html>
@@ -31,7 +75,6 @@ const htmlContent = `<!DOCTYPE html>
 <body class="bg-gray-50 text-gray-800">
     <div id="app" class="container mx-auto p-4 max-w-4xl">
         <div id="loginSection" class="max-w-md mx-auto mt-12">
-            <!-- لوگوی خوشگل و اختصاصی -->
             <div class="text-center mb-6">
                 <div class="inline-block p-4 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg text-white mb-3">
                     <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -61,14 +104,12 @@ const htmlContent = `<!DOCTYPE html>
         </div>
 
         <div id="dashboardSection" class="hidden mt-6">
-            <!-- نوار بالایی داشبورد شامل اطلاعات کاربر، تایمر و دکمه خروج -->
             <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div>
                     <h1 id="welcomeText" class="text-xl font-bold text-gray-700"></h1>
                     <span id="roleBadge" class="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full"></span>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- نمایش تایمر معکوس -->
                     <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
                         <svg class="w-4 h-4 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span>زمان باقی‌مانده: <strong id="timerDisplay" class="font-mono text-base">02:00</strong></span>
@@ -77,7 +118,6 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- نمای اختصاصی پرسنل (فقط ثبت مرخصی و تاریخچه خودش) -->
             <div id="employeeView" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">ثبت درخواست مرخصی جدید</h2>
@@ -103,15 +143,12 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- نمای اختصاصی مدیران (مدیریت درخواست‌ها، مدیریت کاربران، آمار) -->
             <div id="managerView" class="hidden space-y-6">
-                <!-- بخش مدیریت درخواست‌ها -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت درخواست‌های پرسنل</h2>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- بخش مدیریت کاربران (فقط برای مدیران) -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
                     <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
@@ -154,7 +191,6 @@ const htmlContent = `<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- آرشیو و آمار مرخصی پرسنل -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">آرشیو و آمار مرخصی پرسنل</h2>
                     <div class="overflow-x-auto">
@@ -174,7 +210,6 @@ const htmlContent = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- مدال ویرایش کاربر -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-lg">
             <h3 class="text-lg font-bold mb-4 text-gray-700">ویرایش اطلاعات کاربر</h3>
@@ -189,7 +224,7 @@ const htmlContent = `<!DOCTYPE html>
                     <input type="text" id="editUsername" class="w-full p-2 border rounded-lg text-sm" required>
                 </div>
                 <div class="mb-4">
-                    <label class="block mb-1 text-sm font-medium">رمز عبور جدید (اختیاری - بازنشانی)</label>
+                    <label class="block mb-1 text-sm font-medium">رمز عبور جدید (اختیاری)</label>
                     <input type="password" id="editPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="اگر تغییر نمی‌دهید خالی بگذارید">
                 </div>
                 <div class="mb-4">
@@ -217,7 +252,6 @@ const htmlContent = `<!DOCTYPE html>
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errDiv = document.getElementById('loginError');
-            
             errDiv.classList.add('hidden');
 
             try {
@@ -230,12 +264,10 @@ const htmlContent = `<!DOCTYPE html>
                 
                 if (res.ok) {
                     currentUser = data.user;
-                    // استفاده از sessionStorage به جای localStorage تا با بستن صفحه نشست منقضی شود
                     sessionStorage.setItem('token', data.token);
                     sessionStorage.setItem('user', JSON.stringify(data.user));
                     const expireTime = new Date().getTime() + 2 * 60 * 1000;
                     sessionStorage.setItem('sessionExpire', expireTime);
-                    
                     initDashboard();
                 } else {
                     errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
@@ -259,17 +291,11 @@ const htmlContent = `<!DOCTYPE html>
 
         function startTimer() {
             if (sessionTimer) clearInterval(sessionTimer);
-
             sessionTimer = setInterval(() => {
                 const expireTime = sessionStorage.getItem('sessionExpire');
-                if (!expireTime) {
-                    logout();
-                    return;
-                }
-
+                if (!expireTime) { logout(); return; }
                 const now = new Date().getTime();
                 const distance = expireTime - now;
-
                 if (distance <= 0) {
                     clearInterval(sessionTimer);
                     alert('زمان نشست شما به پایان رسید. لطفاً مجدداً وارد شوید.');
@@ -277,9 +303,7 @@ const htmlContent = `<!DOCTYPE html>
                 } else {
                     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    
-                    document.getElementById('timerDisplay').textContent = 
-                        String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                    document.getElementById('timerDisplay').textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
                 }
             }, 1000);
         }
@@ -290,7 +314,6 @@ const htmlContent = `<!DOCTYPE html>
             document.getElementById('welcomeText').textContent = \`خوش آمدید، \${currentUser.fullname}\`;
             const rolesMap = { 'employee': 'پرسنل', 'manager1': 'مدیر اول', 'manager2': 'مدیر دوم' };
             document.getElementById('roleBadge').textContent = rolesMap[currentUser.role];
-            
             startTimer();
 
             if (currentUser.role === 'employee') {
@@ -309,13 +332,9 @@ const htmlContent = `<!DOCTYPE html>
             const token = sessionStorage.getItem('token');
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-
             const res = await fetch('/api/leaves', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': token 
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
                 body: JSON.stringify({ startDate, endDate, reason: document.getElementById('reason').value })
             });
             if (res.ok) {
@@ -329,9 +348,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function loadLeaves() {
             const token = sessionStorage.getItem('token');
-            const res = await fetch('/api/leaves', {
-                headers: { 'Authorization': token }
-            });
+            const res = await fetch('/api/leaves', { headers: { 'Authorization': token } });
             const leaves = await res.json();
             const listDiv = document.getElementById('myLeavesList');
             listDiv.innerHTML = leaves.length === 0 ? '<p class="text-gray-400 text-sm">درخواستی ثبت نشده است.</p>' : '';
@@ -353,9 +370,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function loadManagerData() {
             const token = sessionStorage.getItem('token');
-            const res = await fetch('/api/leaves', {
-                headers: { 'Authorization': token }
-            });
+            const res = await fetch('/api/leaves', { headers: { 'Authorization': token } });
             const leaves = await res.json();
             const listDiv = document.getElementById('managerLeavesList');
             listDiv.innerHTML = leaves.length === 0 ? '<p class="text-gray-400 text-sm">درخواستی وجود ندارد.</p>' : '';
@@ -390,9 +405,7 @@ const htmlContent = `<!DOCTYPE html>
 
             loadUsersList(token);
 
-            const archiveRes = await fetch('/api/archive', {
-                headers: { 'Authorization': token }
-            });
+            const archiveRes = await fetch('/api/archive', { headers: { 'Authorization': token } });
             const archiveData = await archiveRes.json();
             const archiveBody = document.getElementById('archiveTableBody');
             archiveBody.innerHTML = '';
@@ -442,9 +455,7 @@ const htmlContent = `<!DOCTYPE html>
             document.getElementById('editModal').classList.remove('hidden');
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
         async function updateUser(e) {
             e.preventDefault();
@@ -460,7 +471,6 @@ const htmlContent = `<!DOCTYPE html>
                 headers: { 'Content-Type': 'application/json', 'Authorization': token },
                 body: JSON.stringify({ fullname, username, password, role })
             });
-
             if (res.ok) {
                 closeEditModal();
                 loadManagerData();
@@ -474,17 +484,16 @@ const htmlContent = `<!DOCTYPE html>
         async function addUser(e) {
             e.preventDefault();
             const token = sessionStorage.getItem('token');
-            const fullname = document.getElementById('newFullname').value;
-            const username = document.getElementById('newUsername').value;
-            const password = document.getElementById('newPassword').value;
-            const role = document.getElementById('newRole').value;
-
             const res = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                body: JSON.stringify({ fullname, username, password, role })
+                body: JSON.stringify({
+                    fullname: document.getElementById('newFullname').value,
+                    username: document.getElementById('newUsername').value,
+                    password: document.getElementById('newPassword').value,
+                    role: document.getElementById('newRole').value
+                })
             });
-
             if (res.ok) {
                 document.getElementById('newFullname').value = '';
                 document.getElementById('newUsername').value = '';
@@ -501,28 +510,16 @@ const htmlContent = `<!DOCTYPE html>
         async function deleteUser(userId) {
             if (!confirm('آیا از حذف این کاربر اطمینان دارید؟')) return;
             const token = sessionStorage.getItem('token');
-            const res = await fetch(\`/api/users/\${userId}\`, {
-                method: 'DELETE',
-                headers: { 'Authorization': token }
-            });
-
-            if (res.ok) {
-                loadManagerData();
-                alert('کاربر با موفقیت حذف شد.');
-            } else {
-                const data = await res.json();
-                alert(data.error || 'خطا در حذف کاربر');
-            }
+            const res = await fetch(\`/api/users/\${userId}\`, { method: 'DELETE', headers: { 'Authorization': token } });
+            if (res.ok) { loadManagerData(); alert('کاربر با موفقیت حذف شد.'); }
+            else { const data = await res.json(); alert(data.error || 'خطا در حذف کاربر'); }
         }
 
         async function takeAction(leaveId, action) {
             const token = sessionStorage.getItem('token');
             const res = await fetch('/api/leaves/action', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': token
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
                 body: JSON.stringify({ leaveId, action })
             });
             if (res.ok) loadManagerData();
@@ -536,15 +533,11 @@ const htmlContent = `<!DOCTYPE html>
             const savedUser = sessionStorage.getItem('user');
             const token = sessionStorage.getItem('token');
             const expireTime = sessionStorage.getItem('sessionExpire');
-
             if (savedUser && token && expireTime) {
-                const now = new Date().getTime();
-                if (now < parseInt(expireTime)) {
+                if (new Date().getTime() < parseInt(expireTime)) {
                     currentUser = JSON.parse(savedUser);
                     initDashboard();
-                } else {
-                    logout();
-                }
+                } else { logout(); }
             }
         };
     </script>
@@ -552,238 +545,241 @@ const htmlContent = `<!DOCTYPE html>
 </html>`;
 
 const server = http.createServer((req, res) => {
-    const authenticate = (req) => {
+    const authenticate = async (req, callback) => {
         const token = req.headers['authorization'];
         const userId = activeSessions[token];
-        return users.find(u => u.id === userId);
+        if (!userId) { callback(null); return; }
+        try {
+            const result = await db.query(`SELECT * FROM users WHERE id = $1`, [userId]);
+            callback(result.rows[0] || null);
+        } catch (err) {
+            callback(null);
+        }
     };
 
     if (req.method === 'POST' && req.url === '/api/login') {
         let body = '';
         req.on('data', chunk => body += chunk);
-        req.on('end', () => {
+        req.on('end', async () => {
             try {
                 const { username, password } = JSON.parse(body);
                 const hashedPwd = hashPassword(password);
-                const user = users.find(u => u.username === username && u.password === hashedPwd);
-                
+                const result = await db.query(`SELECT * FROM users WHERE username = $1 AND password = $2`, [username, hashedPwd]);
+                const user = result.rows[0];
+
                 if (!user) {
                     res.writeHead(401, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'نام کاربری یا رمز عبور اشتباه است.' }));
                 } else {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     const token = crypto.randomBytes(32).toString('hex');
                     activeSessions[token] = user.id;
                     const safeUser = { id: user.id, username: user.username, role: user.role, fullname: user.fullname };
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ token, user: safeUser }));
                 }
             } catch (err) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'خطای درخواست' }));
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطای سرور' }));
             }
         });
     } else if (req.method === 'GET' && req.url === '/api/users') {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        const safeUsers = users.map(u => ({ id: u.id, username: u.username, fullname: u.fullname, role: u.role }));
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(safeUsers));
-    } else if (req.method === 'POST' && req.url === '/api/users') {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-            try {
-                const { fullname, username, password, role } = JSON.parse(body);
-                if (users.some(u => u.username === username)) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'این نام کاربری قبلاً ثبت شده است.' }));
-                    return;
-                }
-                users.push({
-                    id: nextUserId++,
-                    username,
-                    password: hashPassword(password),
-                    role: role && ['employee', 'manager1', 'manager2'].includes(role) ? role : 'employee',
-                    fullname
-                });
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'کاربر با موفقیت اضافه شد' }));
-            } catch (err) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'خطای درخواست' }));
-            }
-        });
-    } else if (req.method === 'PUT' && req.url.startsWith('/api/users/')) {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        const targetId = Number(req.url.split('/')[3]);
-        const targetUser = users.find(u => u.id === targetId);
-
-        if (!targetUser) {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'کاربر یافت نشد.' }));
-            return;
-        }
-
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-            try {
-                const { fullname, username, password, role } = JSON.parse(body);
-                if (users.some(u => u.username === username && u.id !== targetId)) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'این نام کاربری توسط شخص دیگری استفاده می‌شود.' }));
-                    return;
-                }
-
-                targetUser.fullname = fullname;
-                targetUser.username = username;
-                if (role && ['employee', 'manager1', 'manager2'].includes(role)) {
-                    targetUser.role = role;
-                }
-                if (password && password.trim() !== '') {
-                    targetUser.password = hashPassword(password);
-                }
-
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'بروزرسانی با موفقیت انجام شد' }));
-            } catch (err) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'خطا در ویرایش' }));
-            }
-        });
-    } else if (req.method === 'DELETE' && req.url.startsWith('/api/users/')) {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        const targetId = Number(req.url.split('/')[3]);
-        
-        if (targetId === user.id) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'امکان حذف حساب کاربری خودتان وجود ندارد.' }));
-            return;
-        }
-
-        users = users.filter(u => u.id !== targetId);
-        leaves = leaves.filter(l => l.user_id !== targetId);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'کاربر حذف شد' }));
-    } else if (req.method === 'POST' && req.url === '/api/leaves') {
-        const user = authenticate(req);
-        if (!user || user.role !== 'employee') {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-            const { startDate, endDate, reason } = JSON.parse(body);
-            leaves.push({
-                id: nextLeaveId++,
-                user_id: user.id,
-                start_date: startDate,
-                end_date: endDate,
-                reason: reason,
-                status1: 'pending',
-                status2: 'pending',
-                final_status: 'pending'
-            });
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'با موفقیت ثبت شد' }));
-        });
-    } else if (req.method === 'GET' && req.url.startsWith('/api/leaves')) {
-        const user = authenticate(req);
-        if (!user) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'لطفا وارد شوید' }));
-            return;
-        }
-        
-        let result = leaves.map(l => {
-            const u = users.find(user => user.id === l.user_id);
-            return { ...l, fullname: u ? u.fullname : 'ناشناس' };
-        });
-
-        if (user.role === 'employee') {
-            result = result.filter(l => l.user_id === user.id);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(result));
-    } else if (req.method === 'POST' && req.url === '/api/leaves/action') {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'شما دسترسی مدیریتی ندارید' }));
-            return;
-        }
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-            const { leaveId, action } = JSON.parse(body);
-            const leave = leaves.find(l => l.id === Number(leaveId));
-
-            if (!leave) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'یافت نشد' }));
+        authenticate(req, async (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
                 return;
             }
+            const result = await db.query(`SELECT id, username, fullname, role FROM users`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result.rows));
+        });
+    } else if (req.method === 'POST' && req.url === '/api/users') {
+        authenticate(req, (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+                return;
+            }
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const { fullname, username, password, role } = JSON.parse(body);
+                    const check = await db.query(`SELECT id FROM users WHERE username = $1`, [username]);
+                    if (check.rows.length > 0) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'این نام کاربری قبلاً ثبت شده است.' }));
+                        return;
+                    }
+                    const finalRole = role && ['employee', 'manager1', 'manager2'].includes(role) ? role : 'employee';
+                    await db.query(`INSERT INTO users (username, password, role, fullname) VALUES ($1, $2, $3, $4)`, 
+                        [username, hashPassword(password), finalRole, fullname]);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ message: 'کاربر با موفقیت اضافه شد' }));
+                } catch (err) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'خطا در ثبت کاربر' }));
+                }
+            });
+        });
+    } else if (req.method === 'PUT' && req.url.startsWith('/api/users/')) {
+        authenticate(req, (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+                return;
+            }
+            const targetId = Number(req.url.split('/')[3]);
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const { fullname, username, password, role } = JSON.parse(body);
+                    const targetRes = await db.query(`SELECT * FROM users WHERE id = $1`, [targetId]);
+                    const targetUser = targetRes.rows[0];
+                    if (!targetUser) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'کاربر یافت نشد.' }));
+                        return;
+                    }
 
-            if (user.role === 'manager1') {
-                leave.status1 = action;
-                if (action === 'rejected') leave.final_status = 'rejected';
-            } else if (user.role === 'manager2') {
-                if (leave.status1 !== 'approved') {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'مدیر اول هنوز تایید نکرده است.' }));
+                    const check = await db.query(`SELECT id FROM users WHERE username = $1 AND id != $2`, [username, targetId]);
+                    if (check.rows.length > 0) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'این نام کاربری توسط شخص دیگری استفاده می‌شود.' }));
+                        return;
+                    }
+
+                    const finalRole = role && ['employee', 'manager1', 'manager2'].includes(role) ? role : targetUser.role;
+                    let newPass = targetUser.password;
+                    if (password && password.trim() !== '') {
+                        newPass = hashPassword(password);
+                    }
+
+                    await db.query(`UPDATE users SET fullname = $1, username = $2, role = $3, password = $4 WHERE id = $5`,
+                        [fullname, username, finalRole, newPass, targetId]);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ message: 'بروزرسانی با موفقیت انجام شد' }));
+                } catch (err) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'خطا در ویرایش' }));
+                }
+            });
+        });
+    } else if (req.method === 'DELETE' && req.url.startsWith('/api/users/')) {
+        authenticate(req, async (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+                return;
+            }
+            const targetId = Number(req.url.split('/')[3]);
+            if (targetId === user.id) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'امکان حذف حساب کاربری خودتان وجود ندارد.' }));
+                return;
+            }
+            await db.query(`DELETE FROM users WHERE id = $1`, [targetId]);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'کاربر حذف شد' }));
+        });
+    } else if (req.method === 'POST' && req.url === '/api/leaves') {
+        authenticate(req, (user) => {
+            if (!user || user.role !== 'employee') {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+                return;
+            }
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                const { startDate, endDate, reason } = JSON.parse(body);
+                await db.query(`INSERT INTO leaves (user_id, start_date, end_date, reason, status1, status2, final_status) VALUES ($1, $2, $3, $4, 'pending', 'pending', 'pending')`,
+                    [user.id, startDate, endDate, reason]);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'با موفقیت ثبت شد' }));
+            });
+        });
+    } else if (req.method === 'GET' && req.url.startsWith('/api/leaves')) {
+        authenticate(req, async (user) => {
+            if (!user) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'لطفا وارد شوید' }));
+                return;
+            }
+            let query = `SELECT leaves.*, users.fullname FROM leaves JOIN users ON leaves.user_id = users.id`;
+            let params = [];
+            if (user.role === 'employee') {
+                query += ` WHERE leaves.user_id = $1`;
+                params.push(user.id);
+            }
+            const result = await db.query(query, params);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result.rows));
+        });
+    } else if (req.method === 'POST' && req.url === '/api/leaves/action') {
+        authenticate(req, (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'شما دسترسی مدیریتی ندارید' }));
+                return;
+            }
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                const { leaveId, action } = JSON.parse(body);
+                const leaveRes = await db.query(`SELECT * FROM leaves WHERE id = $1`, [leaveId]);
+                const leave = leaveRes.rows[0];
+                if (!leave) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'یافت نشد' }));
                     return;
                 }
-                leave.status2 = action;
-                if (action === 'rejected') leave.final_status = 'rejected';
-                else if (action === 'approved' && leave.status1 === 'approved') leave.final_status = 'approved';
-            }
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'بروزرسانی شد' }));
+                let newStatus1 = leave.status1;
+                let newStatus2 = leave.status2;
+                let newFinal = leave.final_status;
+
+                if (user.role === 'manager1') {
+                    newStatus1 = action;
+                    if (action === 'rejected') newFinal = 'rejected';
+                } else if (user.role === 'manager2') {
+                    if (leave.status1 !== 'approved') {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'مدیر اول هنوز تایید نکرده است.' }));
+                        return;
+                    }
+                    newStatus2 = action;
+                    if (action === 'rejected') newFinal = 'rejected';
+                    else if (action === 'approved' && leave.status1 === 'approved') newFinal = 'approved';
+                }
+
+                await db.query(`UPDATE leaves SET status1 = $1, status2 = $2, final_status = $3 WHERE id = $4`,
+                    [newStatus1, newStatus2, newFinal, leaveId]);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'بروزرسانی شد' }));
+            });
         });
     } else if (req.method === 'GET' && req.url === '/api/archive') {
-        const user = authenticate(req);
-        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
-            return;
-        }
-        const employeeList = users.filter(u => u.role === 'employee').map(emp => {
-            const empLeaves = leaves.filter(l => l.user_id === emp.id);
-            const approvedCount = empLeaves.filter(l => l.final_status === 'approved').length;
-            return {
-                fullname: emp.fullname,
-                total_requests: empLeaves.length,
-                approved_count: approvedCount
-            };
+        authenticate(req, async (user) => {
+            if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+                return;
+            }
+            const query = `
+                SELECT users.fullname, 
+                       COUNT(leaves.id) as total_requests,
+                       SUM(CASE WHEN leaves.final_status = 'approved' THEN 1 ELSE 0 END) as approved_count
+                FROM users 
+                LEFT JOIN leaves ON users.id = leaves.user_id 
+                WHERE users.role = 'employee'
+                GROUP BY users.id
+            `;
+            const result = await db.query(query);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result.rows));
         });
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(employeeList));
     } else {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(htmlContent);
@@ -792,5 +788,5 @@ const server = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Secure Server is running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
