@@ -1,23 +1,6 @@
 const http = require('http');
 const crypto = require('crypto');
 
-// تابع تبدیل تاریخ میلادی به شمسی (جلالی)
-function toJalali(dateString) {
-    if (!dateString) return '';
-    try {
-        const d = new Date(dateString);
-        if (isNaN(d.getTime())) return dateString;
-        return new Intl.DateTimeFormat('fa-IR', {
-            calendar: 'persian',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        }).format(d);
-    } catch (e) {
-        return dateString;
-    }
-}
-
 // شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
@@ -137,6 +120,28 @@ const htmlContent = `<!DOCTYPE html>
     <script>
         let currentUser = null;
 
+        // تابع دقیق تبدیل تاریخ میلادی به شمسی در مرورگر
+        function formatToJalali(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const parts = dateStr.split('-');
+                if (parts.length !== 3) return dateStr;
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const day = parseInt(parts[2], 10);
+                
+                const d = new Date(year, month - 1, day);
+                return new Intl.DateTimeFormat('fa-IR', {
+                    calendar: 'persian',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).format(d);
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
@@ -188,6 +193,11 @@ const htmlContent = `<!DOCTYPE html>
         async function submitLeave(e) {
             e.preventDefault();
             const token = localStorage.getItem('token');
+            
+            // تبدیل تاریخ‌ها به شمسی قبل از ارسال به سرور
+            const rawStart = document.getElementById('startDate').value;
+            const rawEnd = document.getElementById('endDate').value;
+
             const res = await fetch('/api/leaves', {
                 method: 'POST',
                 headers: { 
@@ -195,8 +205,8 @@ const htmlContent = `<!DOCTYPE html>
                     'Authorization': token 
                 },
                 body: JSON.stringify({
-                    startDate: document.getElementById('startDate').value,
-                    endDate: document.getElementById('endDate').value,
+                    startDate: formatToJalali(rawStart),
+                    endDate: formatToJalali(rawEnd),
                     reason: document.getElementById('reason').value
                 })
             });
@@ -359,8 +369,8 @@ const server = http.createServer((req, res) => {
             leaves.push({
                 id: nextLeaveId++,
                 user_id: user.id,
-                start_date: toJalali(startDate),
-                end_date: toJalali(endDate),
+                start_date: startDate,
+                end_date: endDate,
                 reason: reason,
                 status1: 'pending',
                 status2: 'pending',
