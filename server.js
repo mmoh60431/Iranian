@@ -9,8 +9,8 @@ function hashPassword(password) {
 // دیتابیس اولیه با رمزهای هش شده (رمز همه: 1234)
 let users = [
     { id: 1, username: 'emp1', password: hashPassword('1234'), role: 'employee', fullname: 'علی احمدی' },
-    { id: 2, username: 'mgr1', password: hashPassword('1234'), role: 'manager1', fullname: 'مدیر اول (رضایی)' },
-    { id: 3, username: 'mgr2', password: hashPassword('1234'), role: 'manager2', fullname: 'مدیر دوم (کریمی)' }
+    { id: 2, username: 'mgr1', password: hashPassword('1234'), role: 'manager1', fullname: 'مدیر اول (خانم حاجیان)' },
+    { id: 3, username: 'mgr2', password: hashPassword('1234'), role: 'manager2', fullname: 'مدیر دوم (آقای معماری پناه)' }
 ];
 
 let leaves = [];
