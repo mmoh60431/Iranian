@@ -9,8 +9,8 @@ function hashPassword(password) {
 // دیتابیس کاربران
 let users = [
     { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
-    { id: 2, username: 'mitrahajiyannezhad', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
-    { id: 3, username: 'mmp', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
+    { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
+    { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
 ];
 
 let leaves = [];
@@ -60,12 +60,20 @@ const htmlContent = `<!DOCTYPE html>
         </div>
 
         <div id="dashboardSection" class="hidden mt-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center mb-6">
+            <!-- نوار بالایی داشبورد شامل اطلاعات کاربر، تایمر و دکمه خروج -->
+            <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div>
                     <h1 id="welcomeText" class="text-xl font-bold text-gray-700"></h1>
                     <span id="roleBadge" class="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full"></span>
                 </div>
-                <button onclick="logout()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition text-sm">خروج امن</button>
+                <div class="flex items-center gap-4">
+                    <!-- نمایش تایمر معکوس -->
+                    <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>زمان باقی‌مانده: <strong id="timerDisplay" class="font-mono text-base">02:00</strong></span>
+                    </div>
+                    <button onclick="logout()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition text-sm">خروج امن</button>
+                </div>
             </div>
 
             <div id="employeeView" class="hidden space-y-6">
@@ -119,6 +127,7 @@ const htmlContent = `<!DOCTYPE html>
 
     <script>
         let currentUser = null;
+        let sessionTimer = null;
 
         async function handleLogin(e) {
             e.preventDefault();
@@ -140,6 +149,10 @@ const htmlContent = `<!DOCTYPE html>
                     currentUser = data.user;
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    // ذخیره زمان انقضا (۲ دقیقه بعد از زمان فعلی)
+                    const expireTime = new Date().getTime() + 2 * 60 * 1000;
+                    localStorage.setItem('sessionExpire', expireTime);
+                    
                     initDashboard();
                 } else {
                     errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
@@ -152,11 +165,40 @@ const htmlContent = `<!DOCTYPE html>
         }
 
         function logout() {
+            if (sessionTimer) clearInterval(sessionTimer);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            localStorage.removeItem('sessionExpire');
             currentUser = null;
             document.getElementById('dashboardSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function startTimer() {
+            if (sessionTimer) clearInterval(sessionTimer);
+
+            sessionTimer = setInterval(() => {
+                const expireTime = localStorage.getItem('sessionExpire');
+                if (!expireTime) {
+                    logout();
+                    return;
+                }
+
+                const now = new Date().getTime();
+                const distance = expireTime - now;
+
+                if (distance <= 0) {
+                    clearInterval(sessionTimer);
+                    alert('زمان نشست شما به پایان رسید. لطفاً مجدداً وارد شوید.');
+                    logout();
+                } else {
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    document.getElementById('timerDisplay').textContent = 
+                        String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                }
+            }, 1000);
         }
 
         function initDashboard() {
@@ -165,6 +207,9 @@ const htmlContent = `<!DOCTYPE html>
             document.getElementById('welcomeText').textContent = \`خوش آمدید، \${currentUser.fullname}\`;
             const rolesMap = { 'employee': 'پرسنل', 'manager1': 'مدیر اول', 'manager2': 'مدیر دوم' };
             document.getElementById('roleBadge').textContent = rolesMap[currentUser.role];
+            
+            startTimer(); // شروع تایمر معکوس
+
             if (currentUser.role === 'employee') {
                 document.getElementById('employeeView').classList.remove('hidden');
                 loadLeaves();
@@ -178,7 +223,6 @@ const htmlContent = `<!DOCTYPE html>
             e.preventDefault();
             const token = localStorage.getItem('token');
             
-            // مستقیماً متن وارد شده (تاریخ شمسی) را می‌خواند و ارسال می‌کند
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
 
@@ -296,9 +340,16 @@ const htmlContent = `<!DOCTYPE html>
         window.onload = () => {
             const savedUser = localStorage.getItem('user');
             const token = localStorage.getItem('token');
-            if (savedUser && token) { 
-                currentUser = JSON.parse(savedUser); 
-                initDashboard(); 
+            const expireTime = localStorage.getItem('sessionExpire');
+
+            if (savedUser && token && expireTime) {
+                const now = new Date().getTime();
+                if (now < parseInt(expireTime)) {
+                    currentUser = JSON.parse(savedUser);
+                    initDashboard();
+                } else {
+                    logout(); // اگر از زمان ۲ دقیقه‌ای گذشته باشد، لاگین معتبر نیست
+                }
             }
         };
     </script>
@@ -408,7 +459,7 @@ const server = http.createServer((req, res) => {
                     return;
                 }
                 leave.status2 = action;
-                if (action === 'rejected') leave.final_status = 'rejected';
+                if (action === 'rejected') leave.final_status: 'rejected'; // Fixed typo if any
                 else if (action === 'approved' && leave.status1 === 'approved') leave.final_status = 'approved';
             }
 
@@ -416,6 +467,8 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ message: 'بروزرسانی شد' }));
         });
     } else if (req.method === 'GET' && req.url === '/api/archive') {
+        TheUser = authenticate(req);
+        // ... (ادامه کدهای آرشیو)
         const user = authenticate(req);
         if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
