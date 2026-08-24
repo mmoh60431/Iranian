@@ -8,9 +8,9 @@ function hashPassword(password) {
 
 // دیتابیس کاربران
 let users = [
-    { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
-    { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
-    { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
+    { id: 1, username: 'Test', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
+    { id: 2, username: 'mitrahajiyannezhad', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
+    { id: 3, username: 'mmp', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
 ];
 
 let leaves = [];
@@ -24,7 +24,7 @@ const htmlContent = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پوشاک ایرانیان - شعبه سعدی</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdار/vazirmatn@v33.003/Vazirmatn-font-face.css">
     <style> body { font-family: 'Vazirmatn', sans-serif; } </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -120,27 +120,27 @@ const htmlContent = `<!DOCTYPE html>
     <script>
         let currentUser = null;
 
-        // تابع دقیق تبدیل تاریخ میلادی به شمسی فرمت شده
-        function formatToJalali(dateStr) {
-            if (!dateStr) return '';
+        // تابع صد در صد تضمینی تبدیل تاریخ میلادی به شمسی
+        function convertToJalali(dateString) {
+            if (!dateString) return '';
             try {
-                const parts = dateStr.split('-');
-                if (parts.length !== 3) return dateStr;
-                const year = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10);
-                const day = parseInt(parts[2], 10);
-                
-                const d = new Date(year, month - 1, day);
-                if (isNaN(d.getTime())) return dateStr;
+                const parts = dateString.split('-');
+                if (parts.length !== 3) return dateString;
+                const gYear = parseInt(parts[0], 10);
+                const gMonth = parseInt(parts[1], 10);
+                const gDay = parseInt(parts[2], 10);
 
-                return new Intl.DateTimeFormat('fa-IR', {
-                    calendar: 'persian',
+                // استفاده از ابزار استاندارد لوکال مرورگر با تقویم فارسی
+                const d = new Date(gYear, gMonth - 1, gDay);
+                const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit'
-                }).format(d);
+                });
+                
+                return formatter.format(d);
             } catch (e) {
-                return dateStr;
+                return dateString;
             }
         }
 
@@ -205,6 +205,10 @@ const htmlContent = `<!DOCTYPE html>
             const rawStart = document.getElementById('startDate').value;
             const rawEnd = document.getElementById('endDate').value;
 
+            // تبدیل دقیق تاریخ‌ها به شمسی قبل از ارسال
+            const persianStart = convertToJalali(rawStart);
+            const persianEnd = convertToJalali(rawEnd);
+
             const res = await fetch('/api/leaves', {
                 method: 'POST',
                 headers: { 
@@ -212,8 +216,8 @@ const htmlContent = `<!DOCTYPE html>
                     'Authorization': token 
                 },
                 body: JSON.stringify({
-                    startDate: formatToJalali(rawStart),
-                    endDate: formatToJalali(rawEnd),
+                    startDate: persianStart,
+                    endDate: persianEnd,
                     reason: document.getElementById('reason').value
                 })
             });
