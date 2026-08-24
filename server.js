@@ -1,16 +1,16 @@
 const http = require('http');
 const crypto = require('crypto');
 
-// شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس (بدون نیاز به نصب پکیج خارجی!)
+// شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس اولیه با رمزهای هش شده (رمز همه: 1234)
+// دیتابیس با نام‌های کاربری و رمزهای جدید و هش شده
 let users = [
-    { id: 1, username: 'emp1', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
-    { id: 2, username: 'mgr1', password: hashPassword('1234'), role: 'manager1', fullname: 'مدیر اول (خانم حاجیان)' },
-    { id: 3, username: 'mgr2', password: hashPassword('1234'), role: 'manager2', fullname: 'مدیر دوم (آقای معماری پناه)' }
+    { id: 1, username: 'Test', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
+    { id: 2, username: 'mitrahajiyannezhad', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
+    { id: 3, username: 'mmp', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
 ];
 
 let leaves = [];
@@ -285,7 +285,6 @@ const htmlContent = `<!DOCTYPE html>
 </html>`;
 
 const server = http.createServer((req, res) => {
-    // تابع کمکی برای احراز هویت از طریق توکن هدر
     const authenticate = (req) => {
         const token = req.headers['authorization'];
         const userId = activeSessions[token];
@@ -304,11 +303,8 @@ const server = http.createServer((req, res) => {
             if (!user) {
                 res.end(JSON.stringify({ error: 'نام کاربری یا رمز عبور اشتباه است.' }));
             } else {
-                // تولید توکن امن تصادفی برای کاربر
                 const token = crypto.randomBytes(32).toString('hex');
                 activeSessions[token] = user.id;
-                
-                // اطلاعات حساس مثل رمز عبور را به کلاینت نمی فرستیم
                 const safeUser = { id: user.id, username: user.username, role: user.role, fullname: user.fullname };
                 res.end(JSON.stringify({ token, user: safeUser }));
             }
