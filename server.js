@@ -8,7 +8,7 @@ function hashPassword(password) {
 
 // دیتابیس کاربران
 let users = [
-    { id: 1, username: 'Test', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
+    { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
     { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
     { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
 ];
