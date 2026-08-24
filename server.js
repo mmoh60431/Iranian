@@ -6,7 +6,7 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس کاربران با نام‌های کاربری دقیقاً به شکل دلخواه شما
+// دیتابیس کاربران
 let users = [
     { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
     { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'میترا حاجیان‌نژاد' },
@@ -14,7 +14,8 @@ let users = [
 ];
 
 let leaves = [];
-let nextLeaveId = 1;
+let nextLeaveId = 4;
+let nextUserId = 4;
 let activeSessions = {};
 
 const htmlContent = `<!DOCTYPE html>
@@ -102,10 +103,48 @@ const htmlContent = `<!DOCTYPE html>
             </div>
 
             <div id="managerView" class="hidden space-y-6">
+                <!-- بخش مدیریت درخواست‌ها -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت درخواست‌های پرسنل</h2>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
+
+                <!-- بخش مدیریت پرسنل (افزودن، ویرایش رمز/نام کاربری، و حذف) -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
+                    <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block mb-1 text-xs font-medium">نام و نام خانوادگی</label>
+                            <input type="text" id="newFullname" class="w-full p-2 border rounded-lg text-sm" placeholder="مثلا علی رضایی" required>
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-xs font-medium">نام کاربری (برای ورود)</label>
+                            <input type="text" id="newUsername" class="w-full p-2 border rounded-lg text-sm" placeholder="مثلا ali" required>
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-xs font-medium">رمز عبور</label>
+                            <input type="password" id="newPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="رمز عبور" required>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition text-sm">افزودن کاربر</button>
+                        </div>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="border-b bg-gray-50 text-sm">
+                                    <th class="p-3">نام کامل</th>
+                                    <th class="p-3">نام کاربری</th>
+                                    <th class="p-3">نقش</th>
+                                    <th class="p-3">عملیات (ویرایش / حذف)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- آرشیو و آمار مرخصی پرسنل -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">آرشیو و آمار مرخصی پرسنل</h2>
                     <div class="overflow-x-auto">
@@ -122,6 +161,32 @@ const htmlContent = `<!DOCTYPE html>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- مدال ویرایش کاربر (تغییر نام کاربری یا رمز عبور فراموش شده) -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-lg">
+            <h3 class="text-lg font-bold mb-4 text-gray-700">ویرایش اطلاعات کاربر</h3>
+            <form onsubmit="updateUser(event)">
+                <input type="hidden" id="editUserId">
+                <div class="mb-4">
+                    <label class="block mb-1 text-sm font-medium">نام کامل</label>
+                    <input type="text" id="editFullname" class="w-full p-2 border rounded-lg text-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-1 text-sm font-medium">نام کاربری جدید</label>
+                    <input type="text" id="editUsername" class="w-full p-2 border rounded-lg text-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-1 text-sm font-medium">رمز عبور جدید (اختیاری - برای بازنشانی)</label>
+                    <input type="password" id="editPassword" class="w-full p-2 border rounded-lg text-sm" placeholder="اگر نمی‌خواهید تغییر کند خالی بگذارید">
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">انصراف</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">ذخیره تغییرات</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -221,7 +286,6 @@ const htmlContent = `<!DOCTYPE html>
         async function submitLeave(e) {
             e.preventDefault();
             const token = localStorage.getItem('token');
-            
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
 
@@ -303,6 +367,8 @@ const htmlContent = `<!DOCTYPE html>
                     </div>\`;
             });
 
+            loadUsersList(token);
+
             const archiveRes = await fetch('/api/archive', {
                 headers: { 'Authorization': token }
             });
@@ -317,6 +383,107 @@ const htmlContent = `<!DOCTYPE html>
                         <td class="p-3 font-bold text-green-600">\${row.approved_count || 0}</td>
                     </tr>\`;
             });
+        }
+
+        async function loadUsersList(token) {
+            const res = await fetch('/api/users', { headers: { 'Authorization': token } });
+            const users = await res.json();
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = '';
+            users.forEach(u => {
+                let actionBtns = u.role === 'employee' ? 
+                    \`<div class="flex gap-2">
+                        <button onclick="openEditModal(\${u.id}, '\${u.fullname}', '\${u.username}')" class="bg-amber-50 text-amber-700 px-3 py-1 rounded text-xs hover:bg-amber-100">ویرایش / بازنشانی رمز</button>
+                        <button onclick="deleteUser(\${u.id})" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs hover:bg-red-100">حذف</button>
+                     </div>\` : 
+                    \`<span class="text-xs text-gray-400">مدیر سیستم</span>\`;
+
+                tableBody.innerHTML += \`
+                    <tr class="border-b text-sm">
+                        <td class="p-3">\${u.fullname}</td>
+                        <td class="p-3">\${u.username}</td>
+                        <td class="p-3">\${u.role === 'employee' ? 'پرسنل' : 'مدیر'}</td>
+                        <td class="p-3">\${actionBtns}</td>
+                    </tr>\`;
+            });
+        }
+
+        function openEditModal(id, fullname, username) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editFullname').value = fullname;
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        async function updateUser(e) {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const id = document.getElementById('editUserId').value;
+            const fullname = document.getElementById('editFullname').value;
+            const username = document.getElementById('editUsername').value;
+            const password = document.getElementById('editPassword').value;
+
+            const res = await fetch(\`/api/users/\${id}\`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ fullname, username, password })
+            });
+
+            if (res.ok) {
+                closeEditModal();
+                loadManagerData();
+                alert('اطلاعات کاربر با موفقیت بروزرسانی شد.');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'خطا در ویرایش اطلاعات');
+            }
+        }
+
+        async function addUser(e) {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const fullname = document.getElementById('newFullname').value;
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ fullname, username, password })
+            });
+
+            if (res.ok) {
+                document.getElementById('newFullname').value = '';
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                loadManagerData();
+                alert('کاربر جدید با موفقیت اضافه شد.');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'خطا در افزودن کاربر');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('آیا از حذف این کاربر اطمینان دارید؟')) return;
+            const token = localStorage.getItem('token');
+            const res = await fetch(\`/api/users/\${userId}\`, {
+                method: 'DELETE',
+                headers: { 'Authorization': token }
+            });
+
+            if (res.ok) {
+                loadManagerData();
+                alert('کاربر با موفقیت حذف شد.');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'خطا در حذف کاربر');
+            }
         }
 
         async function takeAction(leaveId, action) {
@@ -386,6 +553,109 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify({ error: 'خطای درخواست' }));
             }
         });
+    } else if (req.method === 'GET' && req.url === '/api/users') {
+        const user = authenticate(req);
+        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+            return;
+        }
+        const safeUsers = users.map(u => ({ id: u.id, username: u.username, fullname: u.fullname, role: u.role }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(safeUsers));
+    } else if (req.method === 'POST' && req.url === '/api/users') {
+        const user = authenticate(req);
+        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+            return;
+        }
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { fullname, username, password } = JSON.parse(body);
+                if (users.some(u => u.username === username)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'این نام کاربری قبلاً ثبت شده است.' }));
+                    return;
+                }
+                users.push({
+                    id: nextUserId++,
+                    username,
+                    password: hashPassword(password),
+                    role: 'employee',
+                    fullname
+                });
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'کاربر با موفقیت اضافه شد' }));
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطای درخواست' }));
+            }
+        });
+    } else if (req.method === 'PUT' && req.url.startsWith('/api/users/')) {
+        const user = authenticate(req);
+        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+            return;
+        }
+        const targetId = Number(req.url.split('/')[3]);
+        const targetUser = users.find(u => u.id === targetId);
+
+        if (!targetUser || targetUser.role !== 'employee') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'امکان ویرایش این کاربر وجود ندارد.' }));
+            return;
+        }
+
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { fullname, username, password } = JSON.parse(body);
+                // بررسی تکراری نبودن نام کاربری جدید
+                if (users.some(u => u.username === username && u.id !== targetId)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'این نام کاربری توسط شخص دیگری استفاده می‌شود.' }));
+                    return;
+                }
+
+                targetUser.fullname = fullname;
+                targetUser.username = username;
+                if (password && password.trim() !== '') {
+                    targetUser.password = hashPassword(password);
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'بروزرسانی با موفقیت انجام شد' }));
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطا در ویرایش' }));
+            }
+        });
+    } else if (req.method === 'DELETE' && req.url.startsWith('/api/users/')) {
+        const user = authenticate(req);
+        if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+            return;
+        }
+        const targetId = Number(req.url.split('/')[3]);
+        const targetUser = users.find(u => u.id === targetId);
+        
+        if (!targetUser || targetUser.role !== 'employee') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'امکان حذف مدیران وجود ندارد.' }));
+            return;
+        }
+
+        users = users.filter(u => u.id !== targetId);
+        leaves = leaves.filter(l => l.user_id !== targetId);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'کاربر حذف شد' }));
     } else if (req.method === 'POST' && req.url === '/api/leaves') {
         const user = authenticate(req);
         if (!user || user.role !== 'employee') {
