@@ -49,7 +49,7 @@ const htmlContent = `<!DOCTYPE html>
         <div id="loginSection" class="bg-white p-8 rounded-2xl shadow-md max-w-md mx-auto mt-20">
             <h2 class="text-2xl font-bold mb-2 text-center text-blue-600">ورود به سیستم مرخصی</h2>
             <p class="text-xs text-center text-red-500 mb-6">🔒 مجهز به لایه امنیتی و احراز هویت توکنی</p>
-            <div id="loginError" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+            <div id="loginError" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center"></div>
             <form onsubmit="handleLogin(event)">
                 <div class="mb-4">
                     <label class="block mb-2 text-sm font-medium">نام کاربری</label>
@@ -128,6 +128,11 @@ const htmlContent = `<!DOCTYPE html>
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const errDiv = document.getElementById('loginError');
+            
+            // مخفی کردن خطای قبلی موقع تلاش جدید
+            errDiv.classList.add('hidden');
+
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -140,8 +145,8 @@ const htmlContent = `<!DOCTYPE html>
                 localStorage.setItem('user', JSON.stringify(data.user));
                 initDashboard();
             } else {
-                const errDiv = document.getElementById('loginError');
-                errDiv.textContent = data.error;
+                // نمایش خطا و ماندن در صفحه ورود
+                errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
                 errDiv.classList.remove('hidden');
             }
         }
@@ -310,18 +315,23 @@ const server = http.createServer((req, res) => {
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
-            const { username, password } = JSON.parse(body);
-            const hashedPwd = hashPassword(password);
-            const user = users.find(u => u.username === username && u.password === hashedPwd);
-            
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            if (!user) {
-                res.end(JSON.stringify({ error: 'نام کاربری یا رمز عبور اشتباه است.' }));
-            } else {
-                const token = crypto.randomBytes(32).toString('hex');
-                activeSessions[token] = user.id;
-                const safeUser = { id: user.id, username: user.username, role: user.role, fullname: user.fullname };
-                res.end(JSON.stringify({ token, user: safeUser }));
+            try {
+                const { username, password } = JSON.parse(body);
+                const hashedPwd = hashPassword(password);
+                const user = users.find(u => u.username === username && u.password === hashedPwd);
+                
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                if (!user) {
+                    res.end(JSON.stringify({ error: 'نام کاربری یا رمز عبور اشتباه است.' }));
+                } else {
+                    const token = crypto.randomBytes(32).toString('hex');
+                    activeSessions[token] = user.id;
+                    const safeUser = { id: user.id, username: user.username, role: user.role, fullname: user.fullname };
+                    res.end(JSON.stringify({ token, user: safeUser }));
+                }
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطای درخواست' }));
             }
         });
     } else if (req.method === 'POST' && req.url === '/api/leaves') {
