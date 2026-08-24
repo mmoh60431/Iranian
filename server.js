@@ -24,7 +24,7 @@ const htmlContent = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پوشاک ایرانیان - شعبه سعدی</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdار/vazirmatn@v33.003/Vazirmatn-font-face.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
     <style> body { font-family: 'Vazirmatn', sans-serif; } </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -73,12 +73,12 @@ const htmlContent = `<!DOCTYPE html>
                     <h2 class="text-lg font-bold mb-4 text-gray-700">ثبت درخواست مرخصی جدید</h2>
                     <form onsubmit="submitLeave(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label class="block mb-1 text-sm">تاریخ شروع</label>
-                            <input type="date" id="startDate" class="w-full p-2 border rounded-lg" required>
+                            <label class="block mb-1 text-sm">تاریخ شروع (مثلا 1405/06/02)</label>
+                            <input type="text" id="startDate" placeholder="1405/06/02" class="w-full p-2 border rounded-lg text-left dir-ltr" required>
                         </div>
                         <div>
-                            <label class="block mb-1 text-sm">تاریخ پایان</label>
-                            <input type="date" id="endDate" class="w-full p-2 border rounded-lg" required>
+                            <label class="block mb-1 text-sm">تاریخ پایان (مثلا 1405/06/05)</label>
+                            <input type="text" id="endDate" placeholder="1405/06/05" class="w-full p-2 border rounded-lg text-left dir-ltr" required>
                         </div>
                         <div class="md:col-span-3">
                             <label class="block mb-1 text-sm">دلیل مرخصی</label>
@@ -119,30 +119,6 @@ const htmlContent = `<!DOCTYPE html>
 
     <script>
         let currentUser = null;
-
-        // تابع صد در صد تضمینی تبدیل تاریخ میلادی به شمسی
-        function convertToJalali(dateString) {
-            if (!dateString) return '';
-            try {
-                const parts = dateString.split('-');
-                if (parts.length !== 3) return dateString;
-                const gYear = parseInt(parts[0], 10);
-                const gMonth = parseInt(parts[1], 10);
-                const gDay = parseInt(parts[2], 10);
-
-                // استفاده از ابزار استاندارد لوکال مرورگر با تقویم فارسی
-                const d = new Date(gYear, gMonth - 1, gDay);
-                const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                });
-                
-                return formatter.format(d);
-            } catch (e) {
-                return dateString;
-            }
-        }
 
         async function handleLogin(e) {
             e.preventDefault();
@@ -202,12 +178,9 @@ const htmlContent = `<!DOCTYPE html>
             e.preventDefault();
             const token = localStorage.getItem('token');
             
-            const rawStart = document.getElementById('startDate').value;
-            const rawEnd = document.getElementById('endDate').value;
-
-            // تبدیل دقیق تاریخ‌ها به شمسی قبل از ارسال
-            const persianStart = convertToJalali(rawStart);
-            const persianEnd = convertToJalali(rawEnd);
+            // مستقیماً متن وارد شده (تاریخ شمسی) را می‌خواند و ارسال می‌کند
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
 
             const res = await fetch('/api/leaves', {
                 method: 'POST',
@@ -215,11 +188,7 @@ const htmlContent = `<!DOCTYPE html>
                     'Content-Type': 'application/json',
                     'Authorization': token 
                 },
-                body: JSON.stringify({
-                    startDate: persianStart,
-                    endDate: persianEnd,
-                    reason: document.getElementById('reason').value
-                })
+                body: JSON.stringify({ startDate, endDate, reason: document.getElementById('reason').value })
             });
             if (res.ok) {
                 document.getElementById('startDate').value = '';
