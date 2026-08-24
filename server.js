@@ -6,11 +6,11 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس کاربران
+// دیتابیس کاربران با نام‌های کاربری دقیقاً به شکل دلخواه شما
 let users = [
     { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
-    { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
-    { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'مدیر دوم' }
+    { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'میترا حاجیان‌نژاد' },
+    { id: 3, username: 'محمد معماری پناه', password: hashPassword('53038386'), role: 'manager2', fullname: 'محمد معماری پناه' }
 ];
 
 let leaves = [];
@@ -149,7 +149,6 @@ const htmlContent = `<!DOCTYPE html>
                     currentUser = data.user;
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    // ذخیره زمان انقضا (۲ دقیقه بعد از زمان فعلی)
                     const expireTime = new Date().getTime() + 2 * 60 * 1000;
                     localStorage.setItem('sessionExpire', expireTime);
                     
@@ -208,7 +207,7 @@ const htmlContent = `<!DOCTYPE html>
             const rolesMap = { 'employee': 'پرسنل', 'manager1': 'مدیر اول', 'manager2': 'مدیر دوم' };
             document.getElementById('roleBadge').textContent = rolesMap[currentUser.role];
             
-            startTimer(); // شروع تایمر معکوس
+            startTimer();
 
             if (currentUser.role === 'employee') {
                 document.getElementById('employeeView').classList.remove('hidden');
@@ -348,7 +347,7 @@ const htmlContent = `<!DOCTYPE html>
                     currentUser = JSON.parse(savedUser);
                     initDashboard();
                 } else {
-                    logout(); // اگر از زمان ۲ دقیقه‌ای گذشته باشد، لاگین معتبر نیست
+                    logout();
                 }
             }
         };
@@ -459,7 +458,7 @@ const server = http.createServer((req, res) => {
                     return;
                 }
                 leave.status2 = action;
-                if (action === 'rejected') leave.final_status: 'rejected'; // Fixed typo if any
+                if (action === 'rejected') leave.final_status = 'rejected';
                 else if (action === 'approved' && leave.status1 === 'approved') leave.final_status = 'approved';
             }
 
@@ -467,8 +466,6 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ message: 'بروزرسانی شد' }));
         });
     } else if (req.method === 'GET' && req.url === '/api/archive') {
-        TheUser = authenticate(req);
-        // ... (ادامه کدهای آرشیو)
         const user = authenticate(req);
         if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
