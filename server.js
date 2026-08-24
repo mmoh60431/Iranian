@@ -39,31 +39,44 @@ const htmlContent = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سیستم مدیریت مرخصی - امن</title>
+    <title>پوشاک ایرانیان - شعبه سعدی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
     <style> body { font-family: 'Vazirmatn', sans-serif; } </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
     <div id="app" class="container mx-auto p-4 max-w-4xl">
-        <div id="loginSection" class="bg-white p-8 rounded-2xl shadow-md max-w-md mx-auto mt-20">
-            <h2 class="text-2xl font-bold mb-2 text-center text-blue-600">ورود به سیستم مرخصی</h2>
-            <p class="text-xs text-center text-red-500 mb-6">🔒 مجهز به لایه امنیتی و احراز هویت توکنی</p>
-            <div id="loginError" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center"></div>
-            <form onsubmit="handleLogin(event)">
-                <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium">نام کاربری</label>
-                    <input type="text" id="username" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+        <div id="loginSection" class="max-w-md mx-auto mt-12">
+            <!-- لوگوی خوشگل و اختصاصی -->
+            <div class="text-center mb-6">
+                <div class="inline-block p-4 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg text-white mb-3">
+                    <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
                 </div>
-                <div class="mb-6">
-                    <label class="block mb-2 text-sm font-medium">رمز عبور</label>
-                    <input type="password" id="password" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">ورود امن</button>
-            </form>
+                <h1 class="text-2xl font-black text-gray-800 tracking-wide">پوشاک ایرانیان</h1>
+                <span class="inline-block mt-1 text-xs px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full">شعبه سعدی</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-md">
+                <h2 class="text-xl font-bold mb-1 text-center text-gray-700">ورود به سیستم مدیریت مرخصی</h2>
+                <p class="text-xs text-center text-gray-400 mb-6">لطفاً اطلاعات کاربری خود را وارد کنید</p>
+                <div id="loginError" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center"></div>
+                <form onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block mb-2 text-sm font-medium">نام کاربری</label>
+                        <input type="text" id="username" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block mb-2 text-sm font-medium">رمز عبور</label>
+                        <input type="password" id="password" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition font-medium shadow-md">ورود به سیستم</button>
+                </form>
+            </div>
         </div>
 
-        <div id="dashboardSection" class="hidden">
+        <div id="dashboardSection" class="hidden mt-6">
             <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center mb-6">
                 <div>
                     <h1 id="welcomeText" class="text-xl font-bold text-gray-700"></h1>
@@ -130,7 +143,6 @@ const htmlContent = `<!DOCTYPE html>
             const password = document.getElementById('password').value;
             const errDiv = document.getElementById('loginError');
             
-            // مخفی کردن خطای قبلی موقع تلاش جدید
             errDiv.classList.add('hidden');
 
             const res = await fetch('/api/login', {
@@ -145,7 +157,6 @@ const htmlContent = `<!DOCTYPE html>
                 localStorage.setItem('user', JSON.stringify(data.user));
                 initDashboard();
             } else {
-                // نمایش خطا و ماندن در صفحه ورود
                 errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
                 errDiv.classList.remove('hidden');
             }
