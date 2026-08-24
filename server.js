@@ -30,8 +30,11 @@ const htmlContent = `<!DOCTYPE html>
     <div id="app" class="container mx-auto p-4 max-w-4xl">
         <div id="loginSection" class="max-w-md mx-auto mt-12">
             <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-md mb-3 text-2xl font-black">
-                    پ
+                <!-- لوگوی شیک و مدرن (آیکون فروشگاه و پوشاک) -->
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
                 </div>
                 <h1 class="text-2xl font-black text-gray-800 tracking-wide">پوشاک ایرانیان</h1>
                 <span class="inline-block mt-1 text-xs px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full">شعبه سعدی</span>
@@ -58,7 +61,11 @@ const htmlContent = `<!DOCTYPE html>
         <div id="dashboardSection" class="hidden mt-6">
             <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-lg font-black text-lg">پ</div>
+                    <div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center rounded-lg shadow">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
+                    </div>
                     <div>
                         <h1 id="welcomeText" class="text-lg font-bold text-gray-700"></h1>
                         <span id="roleBadge" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full"></span>
