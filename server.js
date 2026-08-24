@@ -1,12 +1,29 @@
 const http = require('http');
 const crypto = require('crypto');
 
+// تابع تبدیل تاریخ میلادی به شمسی (جلالی)
+function toJalali(dateString) {
+    if (!dateString) return '';
+    try {
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return dateString;
+        return new Intl.DateTimeFormat('fa-IR', {
+            calendar: 'persian',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(d);
+    } catch (e) {
+        return dateString;
+    }
+}
+
 // شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس با نام‌های کاربری و رمزهای جدید و هش شده
+// دیتابیس کاربران
 let users = [
     { id: 1, username: 'Test', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
     { id: 2, username: 'mitrahajiyannezhad', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'مدیر اول (میترا حاجیان‌نژاد)' },
@@ -15,9 +32,7 @@ let users = [
 
 let leaves = [];
 let nextLeaveId = 1;
-
-// ساخت توکن ساده و امن برای نشست (Session Token)
-let activeSessions = {}; // token -> userId
+let activeSessions = {};
 
 const htmlContent = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -323,8 +338,8 @@ const server = http.createServer((req, res) => {
             leaves.push({
                 id: nextLeaveId++,
                 user_id: user.id,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: toJalali(startDate),
+                end_date: toJalali(endDate),
                 reason: reason,
                 status1: 'pending',
                 status2: 'pending',
