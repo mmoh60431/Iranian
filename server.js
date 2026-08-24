@@ -1,12 +1,10 @@
 const http = require('http');
 const crypto = require('crypto');
 
-// شبیه‌سازی هش کردن رمز عبور با crypto خودِ نود جی‌اس
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// دیتابیس کاربران
 let users = [
     { id: 1, username: 'تست', password: hashPassword('1234'), role: 'employee', fullname: 'کاربر تست' },
     { id: 2, username: 'میترا حاجیان نژاد', password: hashPassword('mitra1368'), role: 'manager1', fullname: 'میترا حاجیان‌نژاد' },
@@ -18,8 +16,7 @@ let nextLeaveId = 1;
 let nextUserId = 4;
 let activeSessions = {};
 
-// لینک مستقیم یا بیس‌فیکس شده‌ی لوگو برای نمایش در سردر سایت
-const logoUrl = "https://i.ibb.co/6R0n72g/images.jpg"; // (می‌توانید لینک دلخواه یا بیس ۶۴ بگذارید)
+const logoUrl = "https://i.ibb.co/6R0n72g/images.jpg";
 
 const htmlContent = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -35,7 +32,6 @@ const htmlContent = `<!DOCTYPE html>
     <div id="app" class="container mx-auto p-4 max-w-4xl">
         <div id="loginSection" class="max-w-md mx-auto mt-12">
             <div class="text-center mb-6">
-                <!-- جایگزینی آیکن قبلی با لوگوی اصلی شما -->
                 <div class="inline-block p-2 bg-white rounded-2xl shadow-md mb-3 border border-gray-100">
                     <img src="${logoUrl}" alt="پوشاک ایرانیان" class="w-20 h-20 object-contain mx-auto rounded-xl">
                 </div>
@@ -110,6 +106,26 @@ const htmlContent = `<!DOCTYPE html>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
+                <!-- بخش جدید گزارش تفکیک‌شده روزها و تعداد مرخصی پرسنل -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-700">گزارش تفکیکی روزها و تعداد مرخصی پرسنل</h2>
+                        <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-200 transition">چاپ / خروجی گزارش</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="border-b bg-gray-50 text-sm">
+                                    <th class="p-3">نام پرسنل</th>
+                                    <th class="p-3">تعداد کل درخواست‌ها</th>
+                                    <th class="p-3">مرخصی‌های تاییدشده (روزها و تاریخ‌ها)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailedReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
                     <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
@@ -148,22 +164,6 @@ const htmlContent = `<!DOCTYPE html>
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl shadow-sm">
-                    <h2 class="text-lg font-bold mb-4 text-gray-700">آرشیو و آمار مرخصی پرسنل</h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right border-collapse">
-                            <thead>
-                                <tr class="border-b bg-gray-50 text-sm">
-                                    <th class="p-3">نام پرسنل</th>
-                                    <th class="p-3">کل درخواست‌ها</th>
-                                    <th class="p-3">مرخصی‌های تایید شده</th>
-                                </tr>
-                            </thead>
-                            <tbody id="archiveTableBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -389,14 +389,24 @@ const htmlContent = `<!DOCTYPE html>
                 headers: { 'Authorization': token }
             });
             const archiveData = await archiveRes.json();
-            const archiveBody = document.getElementById('archiveTableBody');
-            archiveBody.innerHTML = '';
+            const reportBody = document.getElementById('detailedReportTableBody');
+            reportBody.innerHTML = '';
+            
             archiveData.forEach(row => {
-                archiveBody.innerHTML += \`
+                let detailsHtml = '<span class="text-gray-400 text-xs">مرخصی تاییدشده‌ای ثبت نشده است</span>';
+                if (row.approved_leaves && row.approved_leaves.length > 0) {
+                    detailsHtml = '<ul class="space-y-1 text-xs">';
+                    row.approved_leaves.forEach(item => {
+                        detailsHtml += \`<li>• از <span class="font-mono font-bold">\${item.start}</span> تا <span class="font-mono font-bold">\${item.end}</span> <span class="text-gray-500">(\${item.reason})</span></li>\`;
+                    });
+                    detailsHtml += '</ul>';
+                }
+
+                reportBody.innerHTML += \`
                     <tr class="border-b text-sm">
-                        <td class="p-3">\${row.fullname}</td>
+                        <td class="p-3 font-semibold">\${row.fullname}</td>
                         <td class="p-3">\${row.total_requests || 0}</td>
-                        <td class="p-3 font-bold text-green-600">\${row.approved_count || 0}</td>
+                        <td class="p-3">\${detailsHtml}</td>
                     </tr>\`;
             });
         }
@@ -769,11 +779,15 @@ const server = http.createServer((req, res) => {
         const employees = users.filter(u => u.role === 'employee');
         const archive = employees.map(emp => {
             const empLeaves = leaves.filter(l => l.user_id === emp.id);
-            const approvedCount = empLeaves.filter(l => l.final_status === 'approved').length;
+            const approvedEmpLeaves = empLeaves.filter(l => l.final_status === 'approved').map(l => ({
+                start: l.start_date,
+                end: l.end_date,
+                reason: l.reason
+            }));
             return {
                 fullname: emp.fullname,
                 total_requests: empLeaves.length,
-                approved_count: approvedCount
+                approved_leaves: approvedEmpLeaves
             };
         });
         res.writeHead(200, { 'Content-Type': 'application/json' });
