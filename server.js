@@ -230,10 +230,11 @@ const htmlContent = `<!DOCTYPE html>
                 
                 if (res.ok) {
                     currentUser = data.user;
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    // استفاده از sessionStorage به جای localStorage تا با بستن صفحه نشست منقضی شود
+                    sessionStorage.setItem('token', data.token);
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
                     const expireTime = new Date().getTime() + 2 * 60 * 1000;
-                    localStorage.setItem('sessionExpire', expireTime);
+                    sessionStorage.setItem('sessionExpire', expireTime);
                     
                     initDashboard();
                 } else {
@@ -248,9 +249,9 @@ const htmlContent = `<!DOCTYPE html>
 
         function logout() {
             if (sessionTimer) clearInterval(sessionTimer);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('sessionExpire');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('sessionExpire');
             currentUser = null;
             document.getElementById('dashboardSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
@@ -260,7 +261,7 @@ const htmlContent = `<!DOCTYPE html>
             if (sessionTimer) clearInterval(sessionTimer);
 
             sessionTimer = setInterval(() => {
-                const expireTime = localStorage.getItem('sessionExpire');
+                const expireTime = sessionStorage.getItem('sessionExpire');
                 if (!expireTime) {
                     logout();
                     return;
@@ -292,7 +293,6 @@ const htmlContent = `<!DOCTYPE html>
             
             startTimer();
 
-            // تفکیک کاملاً امن نمایش پنل بر اساس نقش کاربر
             if (currentUser.role === 'employee') {
                 document.getElementById('managerView').classList.add('hidden');
                 document.getElementById('employeeView').classList.remove('hidden');
@@ -306,7 +306,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function submitLeave(e) {
             e.preventDefault();
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
 
@@ -328,7 +328,7 @@ const htmlContent = `<!DOCTYPE html>
         }
 
         async function loadLeaves() {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch('/api/leaves', {
                 headers: { 'Authorization': token }
             });
@@ -352,7 +352,7 @@ const htmlContent = `<!DOCTYPE html>
         }
 
         async function loadManagerData() {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch('/api/leaves', {
                 headers: { 'Authorization': token }
             });
@@ -408,7 +408,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function loadUsersList(token) {
             const res = await fetch('/api/users', { headers: { 'Authorization': token } });
-            if (!res.ok) return; // اگر پرسنل به شکل غیرمجاز درخواست داد رد شود
+            if (!res.ok) return;
             const users = await res.json();
             const tableBody = document.getElementById('usersTableBody');
             tableBody.innerHTML = '';
@@ -448,7 +448,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function updateUser(e) {
             e.preventDefault();
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const id = document.getElementById('editUserId').value;
             const fullname = document.getElementById('editFullname').value;
             const username = document.getElementById('editUsername').value;
@@ -473,7 +473,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function addUser(e) {
             e.preventDefault();
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const fullname = document.getElementById('newFullname').value;
             const username = document.getElementById('newUsername').value;
             const password = document.getElementById('newPassword').value;
@@ -500,7 +500,7 @@ const htmlContent = `<!DOCTYPE html>
 
         async function deleteUser(userId) {
             if (!confirm('آیا از حذف این کاربر اطمینان دارید؟')) return;
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch(\`/api/users/\${userId}\`, {
                 method: 'DELETE',
                 headers: { 'Authorization': token }
@@ -516,7 +516,7 @@ const htmlContent = `<!DOCTYPE html>
         }
 
         async function takeAction(leaveId, action) {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch('/api/leaves/action', {
                 method: 'POST',
                 headers: { 
@@ -533,9 +533,9 @@ const htmlContent = `<!DOCTYPE html>
         function translateStatus(s) { return s === 'approved' ? 'تایید شده' : s === 'rejected' ? 'رد شده' : 'در انتظار'; }
 
         window.onload = () => {
-            const savedUser = localStorage.getItem('user');
-            const token = localStorage.getItem('token');
-            const expireTime = localStorage.getItem('sessionExpire');
+            const savedUser = sessionStorage.getItem('user');
+            const token = sessionStorage.getItem('token');
+            const expireTime = sessionStorage.getItem('sessionExpire');
 
             if (savedUser && token && expireTime) {
                 const now = new Date().getTime();
