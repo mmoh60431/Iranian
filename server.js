@@ -16,6 +16,7 @@ let nextLeaveId = 1;
 let nextUserId = 4;
 let activeSessions = {};
 
+// استفاده از لینک مستقیم و امن برای لوگو
 const logoUrl = "https://i.ibb.co/6R0n72g/images.jpg";
 
 const htmlContent = `<!DOCTYPE html>
@@ -106,7 +107,7 @@ const htmlContent = `<!DOCTYPE html>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- بخش جدید گزارش تفکیک‌شده روزها و تعداد مرخصی پرسنل -->
+                <!-- گزارش تفکیکی روزها و تعداد مرخصی پرسنل -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold text-gray-700">گزارش تفکیکی روزها و تعداد مرخصی پرسنل</h2>
