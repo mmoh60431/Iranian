@@ -120,7 +120,7 @@ const htmlContent = `<!DOCTYPE html>
     <script>
         let currentUser = null;
 
-        // تابع دقیق تبدیل تاریخ میلادی به شمسی در مرورگر
+        // تابع دقیق تبدیل تاریخ میلادی به شمسی فرمت شده
         function formatToJalali(dateStr) {
             if (!dateStr) return '';
             try {
@@ -131,6 +131,8 @@ const htmlContent = `<!DOCTYPE html>
                 const day = parseInt(parts[2], 10);
                 
                 const d = new Date(year, month - 1, day);
+                if (isNaN(d.getTime())) return dateStr;
+
                 return new Intl.DateTimeFormat('fa-IR', {
                     calendar: 'persian',
                     year: 'numeric',
@@ -148,24 +150,27 @@ const htmlContent = `<!DOCTYPE html>
             const password = document.getElementById('password').value;
             const errDiv = document.getElementById('loginError');
             
-            // مخفی کردن خطای قبلی موقع تلاش جدید
             errDiv.classList.add('hidden');
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            
-            if (res.ok) {
-                currentUser = data.user;
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                initDashboard();
-            } else {
-                // نمایش پیغام خطا و ماندن در صفحه ورود
-                errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    currentUser = data.user;
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    initDashboard();
+                } else {
+                    errDiv.textContent = data.error || 'نام کاربری یا رمز عبور اشتباه است.';
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errDiv.textContent = 'خطا در ارتباط با سرور';
                 errDiv.classList.remove('hidden');
             }
         }
@@ -233,7 +238,7 @@ const htmlContent = `<!DOCTYPE html>
                 listDiv.innerHTML += \`
                     <div class="border p-4 rounded-lg flex justify-between items-center text-sm">
                         <div>
-                            <p><b>از:</b> \${l.start_date} تا \${l.end_date}</p>
+                            <p><b>از تاریخ:</b> \${l.start_date} <b>تا تاریخ:</b> \${l.end_date}</p>
                             <p class="text-gray-500 mt-1">دلیل: \${l.reason}</p>
                         </div>
                         <div class="text-left">
@@ -268,7 +273,7 @@ const htmlContent = `<!DOCTYPE html>
                     <div class="border p-4 rounded-lg flex justify-between items-center text-sm">
                         <div>
                             <p><b>پرسنل:</b> \${l.fullname}</p>
-                            <p><b>از:</b> \${l.start_date} تا \${l.end_date}</p>
+                            <p><b>از تاریخ:</b> \${l.start_date} <b>تا تاریخ:</b> \${l.end_date}</p>
                             <p class="text-gray-500 mt-1">دلیل: \${l.reason}</p>
                         </div>
                         <div class="text-left">
@@ -343,10 +348,11 @@ const server = http.createServer((req, res) => {
                 const hashedPwd = hashPassword(password);
                 const user = users.find(u => u.username === username && u.password === hashedPwd);
                 
-                res.writeHead(200, { 'Content-Type': 'application/json' });
                 if (!user) {
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'نام کاربری یا رمز عبور اشتباه است.' }));
                 } else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     const token = crypto.randomBytes(32).toString('hex');
                     activeSessions[token] = user.id;
                     const safeUser = { id: user.id, username: user.username, role: user.role, fullname: user.fullname };
