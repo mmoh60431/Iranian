@@ -46,9 +46,6 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
                 <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">ورود امن</button>
             </form>
-            <div class="mt-4 text-xs text-gray-500 text-center">
-                پرسنل: <b>emp1</b> | مدیر اول: <b>mgr1</b> | مدیر دوم: <b>mgr2</b> (رمز همه: <b>1234</b>)
-            </div>
         </div>
 
         <div id="dashboardSection" class="hidden">
@@ -420,6 +417,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-server.listen(3000, () => {
-    console.log('Secure Server is running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Secure Server is running on port ${PORT}`);
 });
