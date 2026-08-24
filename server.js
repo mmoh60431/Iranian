@@ -14,9 +14,12 @@ let users = [
 ];
 
 let leaves = [];
-let nextLeaveId = 4;
+let nextLeaveId = 1;
 let nextUserId = 4;
 let activeSessions = {};
+
+// لینک مستقیم یا بیس‌فیکس شده‌ی لوگو برای نمایش در سردر سایت
+const logoUrl = "https://i.ibb.co/6R0n72g/images.jpg"; // (می‌توانید لینک دلخواه یا بیس ۶۴ بگذارید)
 
 const htmlContent = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -31,12 +34,10 @@ const htmlContent = `<!DOCTYPE html>
 <body class="bg-gray-50 text-gray-800">
     <div id="app" class="container mx-auto p-4 max-w-4xl">
         <div id="loginSection" class="max-w-md mx-auto mt-12">
-            <!-- لوگوی خوشگل و اختصاصی -->
             <div class="text-center mb-6">
-                <div class="inline-block p-4 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg text-white mb-3">
-                    <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                    </svg>
+                <!-- جایگزینی آیکن قبلی با لوگوی اصلی شما -->
+                <div class="inline-block p-2 bg-white rounded-2xl shadow-md mb-3 border border-gray-100">
+                    <img src="${logoUrl}" alt="پوشاک ایرانیان" class="w-20 h-20 object-contain mx-auto rounded-xl">
                 </div>
                 <h1 class="text-2xl font-black text-gray-800 tracking-wide">پوشاک ایرانیان</h1>
                 <span class="inline-block mt-1 text-xs px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full">شعبه سعدی</span>
@@ -61,14 +62,15 @@ const htmlContent = `<!DOCTYPE html>
         </div>
 
         <div id="dashboardSection" class="hidden mt-6">
-            <!-- نوار بالایی داشبورد شامل اطلاعات کاربر، تایمر و دکمه خروج -->
             <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <div>
-                    <h1 id="welcomeText" class="text-xl font-bold text-gray-700"></h1>
-                    <span id="roleBadge" class="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full"></span>
+                <div class="flex items-center gap-3">
+                    <img src="${logoUrl}" alt="لوگو" class="w-10 h-10 object-contain rounded-lg border">
+                    <div>
+                        <h1 id="welcomeText" class="text-lg font-bold text-gray-700"></h1>
+                        <span id="roleBadge" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full"></span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- نمایش تایمر معکوس -->
                     <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
                         <svg class="w-4 h-4 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span>زمان باقی‌مانده: <strong id="timerDisplay" class="font-mono text-base">02:00</strong></span>
@@ -77,7 +79,6 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- نمای اختصاصی پرسنل (فقط ثبت مرخصی و تاریخچه خودش) -->
             <div id="employeeView" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">ثبت درخواست مرخصی جدید</h2>
@@ -103,15 +104,12 @@ const htmlContent = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- نمای اختصاصی مدیران (مدیریت درخواست‌ها، مدیریت کاربران، آمار) -->
             <div id="managerView" class="hidden space-y-6">
-                <!-- بخش مدیریت درخواست‌ها -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت درخواست‌های پرسنل</h2>
                     <div id="managerLeavesList" class="space-y-4"></div>
                 </div>
 
-                <!-- بخش مدیریت کاربران (فقط برای مدیران) -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">مدیریت کاربران و پرسنل</h2>
                     <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-gray-50 p-4 rounded-xl border">
@@ -154,7 +152,6 @@ const htmlContent = `<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- آرشیو و آمار مرخصی پرسنل -->
                 <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h2 class="text-lg font-bold mb-4 text-gray-700">آرشیو و آمار مرخصی پرسنل</h2>
                     <div class="overflow-x-auto">
@@ -174,7 +171,6 @@ const htmlContent = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- مدال ویرایش کاربر -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-lg">
             <h3 class="text-lg font-bold mb-4 text-gray-700">ویرایش اطلاعات کاربر</h3>
@@ -230,7 +226,6 @@ const htmlContent = `<!DOCTYPE html>
                 
                 if (res.ok) {
                     currentUser = data.user;
-                    // استفاده از sessionStorage به جای localStorage تا با بستن صفحه نشست منقضی شود
                     sessionStorage.setItem('token', data.token);
                     sessionStorage.setItem('user', JSON.stringify(data.user));
                     const expireTime = new Date().getTime() + 2 * 60 * 1000;
@@ -558,7 +553,10 @@ const server = http.createServer((req, res) => {
         return users.find(u => u.id === userId);
     };
 
-    if (req.method === 'POST' && req.url === '/api/login') {
+    if (req.method === 'GET' && req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(htmlContent);
+    } else if (req.method === 'POST' && req.url === '/api/login') {
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
@@ -606,18 +604,19 @@ const server = http.createServer((req, res) => {
                 const { fullname, username, password, role } = JSON.parse(body);
                 if (users.some(u => u.username === username)) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'این نام کاربری قبلاً ثبت شده است.' }));
+                    res.end(JSON.stringify({ error: 'نام کاربری تکراری است.' }));
                     return;
                 }
-                users.push({
+                const newUser = {
                     id: nextUserId++,
                     username,
                     password: hashPassword(password),
-                    role: role && ['employee', 'manager1', 'manager2'].includes(role) ? role : 'employee',
-                    fullname
-                });
+                    fullname,
+                    role: role || 'employee'
+                };
+                users.push(newUser);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'کاربر با موفقیت اضافه شد' }));
+                res.end(JSON.stringify({ success: true }));
             } catch (err) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'خطای درخواست' }));
@@ -630,40 +629,29 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
             return;
         }
-        const targetId = Number(req.url.split('/')[3]);
-        const targetUser = users.find(u => u.id === targetId);
-
-        if (!targetUser) {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'کاربر یافت نشد.' }));
-            return;
-        }
-
+        const userId = parseInt(req.url.split('/')[3]);
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             try {
                 const { fullname, username, password, role } = JSON.parse(body);
-                if (users.some(u => u.username === username && u.id !== targetId)) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'این نام کاربری توسط شخص دیگری استفاده می‌شود.' }));
+                const targetUser = users.find(u => u.id === userId);
+                if (!targetUser) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'کاربر پیدا نشد' }));
                     return;
                 }
-
                 targetUser.fullname = fullname;
                 targetUser.username = username;
-                if (role && ['employee', 'manager1', 'manager2'].includes(role)) {
-                    targetUser.role = role;
-                }
+                targetUser.role = role;
                 if (password && password.trim() !== '') {
                     targetUser.password = hashPassword(password);
                 }
-
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'بروزرسانی با موفقیت انجام شد' }));
+                res.end(JSON.stringify({ success: true }));
             } catch (err) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'خطا در ویرایش' }));
+                res.end(JSON.stringify({ error: 'خطای درخواست' }));
             }
         });
     } else if (req.method === 'DELETE' && req.url.startsWith('/api/users/')) {
@@ -673,19 +661,30 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
             return;
         }
-        const targetId = Number(req.url.split('/')[3]);
-        
-        if (targetId === user.id) {
+        const userId = parseInt(req.url.split('/')[3]);
+        if (userId === user.id) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'امکان حذف حساب کاربری خودتان وجود ندارد.' }));
+            res.end(JSON.stringify({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }));
             return;
         }
-
-        users = users.filter(u => u.id !== targetId);
-        leaves = leaves.filter(l => l.user_id !== targetId);
-
+        users = users.filter(u => u.id !== userId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'کاربر حذف شد' }));
+        res.end(JSON.stringify({ success: true }));
+    } else if (req.method === 'GET' && req.url === '/api/leaves') {
+        const user = authenticate(req);
+        if (!user) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
+            return;
+        }
+        if (user.role === 'employee') {
+            const userLeaves = leaves.filter(l => l.user_id === user.id);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(userLeaves));
+        } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(leaves));
+        }
     } else if (req.method === 'POST' && req.url === '/api/leaves') {
         const user = authenticate(req);
         if (!user || user.role !== 'employee') {
@@ -696,74 +695,69 @@ const server = http.createServer((req, res) => {
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
-            const { startDate, endDate, reason } = JSON.parse(body);
-            leaves.push({
-                id: nextLeaveId++,
-                user_id: user.id,
-                start_date: startDate,
-                end_date: endDate,
-                reason: reason,
-                status1: 'pending',
-                status2: 'pending',
-                final_status: 'pending'
-            });
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'با موفقیت ثبت شد' }));
+            try {
+                const { startDate, endDate, reason } = JSON.parse(body);
+                const newLeave = {
+                    id: nextLeaveId++,
+                    user_id: user.id,
+                    fullname: user.fullname,
+                    start_date: startDate,
+                    end_date: endDate,
+                    reason,
+                    status1: 'pending',
+                    status2: 'pending',
+                    final_status: 'pending'
+                };
+                leaves.push(newLeave);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطای درخواست' }));
+            }
         });
-    } else if (req.method === 'GET' && req.url.startsWith('/api/leaves')) {
-        const user = authenticate(req);
-        if (!user) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'لطفا وارد شوید' }));
-            return;
-        }
-        
-        let result = leaves.map(l => {
-            const u = users.find(user => user.id === l.user_id);
-            return { ...l, fullname: u ? u.fullname : 'ناشناس' };
-        });
-
-        if (user.role === 'employee') {
-            result = result.filter(l => l.user_id === user.id);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(result));
     } else if (req.method === 'POST' && req.url === '/api/leaves/action') {
         const user = authenticate(req);
         if (!user || (user.role !== 'manager1' && user.role !== 'manager2')) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'شما دسترسی مدیریتی ندارید' }));
+            res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
             return;
         }
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
-            const { leaveId, action } = JSON.parse(body);
-            const leave = leaves.find(l => l.id === Number(leaveId));
-
-            if (!leave) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'یافت نشد' }));
-                return;
-            }
-
-            if (user.role === 'manager1') {
-                leave.status1 = action;
-                if (action === 'rejected') leave.final_status = 'rejected';
-            } else if (user.role === 'manager2') {
-                if (leave.status1 !== 'approved') {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'مدیر اول هنوز تایید نکرده است.' }));
+            try {
+                const { leaveId, action } = JSON.parse(body);
+                const leave = leaves.find(l => l.id === leaveId);
+                if (!leave) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'مرخصی پیدا نشد' }));
                     return;
                 }
-                leave.status2 = action;
-                if (action === 'rejected') leave.final_status = 'rejected';
-                else if (action === 'approved' && leave.status1 === 'approved') leave.final_status = 'approved';
-            }
+                if (leave.final_status !== 'pending') {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'این درخواست قبلاً تعیین تکلیف شده است' }));
+                    return;
+                }
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'بروزرسانی شد' }));
+                if (user.role === 'manager1') {
+                    leave.status1 = action;
+                } else if (user.role === 'manager2') {
+                    leave.status2 = action;
+                }
+
+                if (action === 'rejected') {
+                    leave.final_status = 'rejected';
+                } else if (leave.status1 === 'approved' && leave.status2 === 'approved') {
+                    leave.final_status = 'approved';
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'خطای درخواست' }));
+            }
         });
     } else if (req.method === 'GET' && req.url === '/api/archive') {
         const user = authenticate(req);
@@ -772,7 +766,8 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'دسترسی غیرمجاز' }));
             return;
         }
-        const employeeList = users.filter(u => u.role === 'employee').map(emp => {
+        const employees = users.filter(u => u.role === 'employee');
+        const archive = employees.map(emp => {
             const empLeaves = leaves.filter(l => l.user_id === emp.id);
             const approvedCount = empLeaves.filter(l => l.final_status === 'approved').length;
             return {
@@ -781,16 +776,15 @@ const server = http.createServer((req, res) => {
                 approved_count: approvedCount
             };
         });
-
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(employeeList));
+        res.end(JSON.stringify(archive));
     } else {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(htmlContent);
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('صفحه پیدا نشد');
     }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Secure Server is running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
